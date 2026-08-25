@@ -77,7 +77,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize database tables (NO // comments inside SQL)
+// Initialize database tables
 const initDB = async () => {
   try {
     await pool.query(`
@@ -177,8 +177,6 @@ const initDB = async () => {
         ('Safety Helmet Pro', 'Industrial safety helmet with visor', 'Safety', 15000, 100, 'https://images.unsplash.com/photo-1563281577-a7be47e20db9'),
         ('Digital Multimeter', 'Professional digital multimeter with case', 'Electronics', 25000, 30, 'https://images.unsplash.com/photo-1553406830-ef2513450d76')
       ON CONFLICT DO NOTHING;
-
-      console.log('✅ Database initialized successfully');
     `);
   } catch (error) {
     console.error('Error initializing database:', error);
