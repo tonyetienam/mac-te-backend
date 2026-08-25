@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details | Mac-TE Engineering</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .product-detail-wrapper {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            display: flex;
+            gap: 30px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        
+        .product-images {
+            flex: 1;
+            max-width: 500px;
+        }
+        .main-image {
+            width: 100%;
+            height: 500px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .thumbnail-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            overflow-x: auto;
+        }
+        .thumbnail {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .thumbnail:hover { border-color: #ff9900; }
+        
+        .product-info {
+            flex: 1;
+        }
+        .product-info h1 { font-size: 28px; font-weight: 800; margin-bottom: 10px; }
+        .product-info .brand { color: #888; font-size: 14px; margin-bottom: 15px; }
+        .product-info .price-section { margin-bottom: 20px; }
+        .product-info .current-price { font-size: 32px; font-weight: 800; color: #ff9900; }
+        .product-info .original-price { font-size: 20px; text-decoration: line-through; color: #999; margin-left: 10px; }
+        .product-info .discount-badge { background: #ff0000; color: white; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 700; margin-left: 10px; }
+        .product-info .description { font-size: 16px; color: #666; line-height: 1.6; margin-bottom: 20px; }
+        
+        .delivery-section {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .delivery-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+        .delivery-option { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; cursor: pointer; }
+        .delivery-option:hover { background: #fff; }
+        .delivery-option input { accent-color: #ff9900; }
+        
+        .btn-add-cart {
+            background: #ff9900;
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 800;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .btn-add-cart:hover { opacity: 0.9; }
+        .btn-wishlist {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            color: #333;
+            padding: 15px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+            .product-detail-wrapper { flex-direction: column; }
+            .main-image { height: 300px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAV -->
+    <div class="top-nav">
+        <div class="logo" onclick="window.location.href='index.html'">Mac-TE <span>Engineering</span></div>
+        <div class="nav-right">
+            <div class="nav-link" onclick="window.location.href='index.html'"><i class="fas fa-store"></i> Shop</div>
+            <div class="nav-link" onclick="window.location.href='cart.html'"><i class="fas fa-shopping-cart"></i> Cart <span id="cart-count" class="cart-count">0</span></div>
+            <div class="nav-link" onclick="window.location.href='profile.html'"><i class="fas fa-user"></i> Account</div>
+        </div>
+    </div>
+
+    <!-- PRODUCT DETAILS -->
+    <div class="product-detail-wrapper">
+        <div class="product-images">
+            <img class="main-image" id="mainImage" src="" alt="Product">
+            <div class="thumbnail-row" id="thumbnailRow"></div>
+        </div>
+
+        <div class="product-info">
+            <h1 id="productTitle">Product Name</h1>
+            <p class="brand" id="productBrand">Mac-TE Engineering</p>
+            
+            <div class="price-section">
+                <span class="current-price" id="productPrice">₦0.00</span>
+                <span class="original-price" id="originalPrice"></span>
+                <span class="discount-badge" id="discountBadge" style="display:none;"></span>
+            </div>
+
+            <p class="description" id="productDescription">Product description goes here.</p>
+
+            <!-- DELIVERY & RETURNS SECTION -->
+            <div class="delivery-section">
+                <h3>Delivery & Returns</h3>
+                
+                <label class="delivery-option">
+                    <input type="radio" name="delivery" value="pickup" checked>
+                    <div>
+                        <strong>Pickup Station</strong>
+                        <div style="font-size:12px; color:#888;">Delivery in 3-5 days</div>
+                    </div>
+                </label>
+                
+                <label class="delivery-option">
+                    <input type="radio" name="delivery" value="door">
+                    <div>
+                        <strong>Door Delivery</strong>
+                        <div style="font-size:12px; color:#888;">Delivery in 2-4 days</div>
+                    </div>
+                </label>
+
+                <div style="font-size:12px; color:#888; margin-top:10px;">
+                    <i class="fas fa-undo"></i> 7-day return policy available
+                </div>
+            </div>
+
+            <button class="btn-add-cart" onclick="addToCart()">Add to Cart</button>
+            <button class="btn-wishlist" onclick="addToWishlist()">Save to Wishlist</button>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://mac-te-engineering.onrender.com';
+        let product = null;
+        let images = [];
+        const user = JSON.parse(localStorage.getItem('user'));
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        if (!user) { window.location.href = 'auth.html'; }
+
+        async function loadProduct() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/products`);
+                const allProducts = await response.json();
+                product = allProducts.find(p => p.id === productId);
+                
+                if (product) {
+                    // Fix Price Display
+                    const price = parseFloat(product.price_ngn);
+                    document.getElementById('productTitle').innerText = product.name;
+                    document.getElementById('productPrice').innerText = `₦${price.toLocaleString()}`;
+                    document.getElementById('productDescription').innerText = product.description || 'No description available';
+                    
+                    // Setup Images
+                    images = [product.main_image];
+                    if (product.images) { images = images.concat(product.images); }
+                    images = [...new Set(images)].filter(url => url && url.trim() !== '');
+                    
+                    if (images.length > 0) {
+                        document.getElementById('mainImage').src = images[0];
+                        loadThumbnails();
+                    }
+                } else {
+                    window.location.href = 'index.html';
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        function loadThumbnails() {
+            const row = document.getElementById('thumbnailRow');
+            row.innerHTML = images.map((img, index) => `
+                <img class="thumbnail" src="${img}" onclick="changeImage(${index})" alt="Thumbnail">
+            `).join('');
+        }
+
+        function changeImage(index) {
+            document.getElementById('mainImage').src = images[index];
+        }
+
+        async function addToCart() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/cart/add`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: user.id, product_id: product.id, quantity: 1 })
+                });
+                const data = await response.json();
+                if (data.message) {
+                    alert(`✅ ${data.message}`);
+                    window.location.href = 'cart.html'; // Redirect to Cart page
+                } else {
+                    alert('❌ Failed.');
+                }
+            } catch (error) { alert('❌ Network error.'); }
+        }
+
+        async function addToWishlist() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/wishlist/add`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: user.id, product_id: product.id })
+                });
+                const data = await response.json();
+                if (data.message) alert(`✅ ${data.message}`);
+                else alert(data.error || 'Already in wishlist');
+            } catch (error) { alert('Network error.'); }
+        }
+
+        // Load cart count
+        async function loadCartCount() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/cart/${user.id}`);
+                const items = await response.json();
+                const countEl = document.getElementById('cart-count');
+                if (countEl) countEl.innerText = items.length;
+            } catch (error) { console.error(error); }
+        }
+
+        loadProduct();
+        loadCartCount();
+    </script>
+</body>
+</html>

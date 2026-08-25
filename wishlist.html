@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Wishlist | Mac-TE Engineering</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .page-container { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        .wishlist-item { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .wishlist-item img { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; }
+        .wishlist-item-details { flex: 1; }
+        .wishlist-item-details h4 { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+        .wishlist-item-details .price { font-size: 16px; font-weight: 800; color: #ff9900; }
+        .remove-btn { background: #ff4757; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+        .empty-msg { text-align: center; color: #999; padding: 40px; }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <div class="logo" onclick="window.location.href='index.html'">Mac-TE <span>Engineering</span></div>
+        <div class="nav-right">
+            <div class="nav-link" onclick="window.location.href='index.html'"><i class="fas fa-store"></i> Shop</div>
+            <div class="nav-link" onclick="window.location.href='cart.html'"><i class="fas fa-shopping-cart"></i> Cart</div>
+            <div class="nav-link" onclick="window.location.href='profile.html'"><i class="fas fa-user"></i> Account</div>
+        </div>
+    </div>
+
+    <div class="page-container">
+        <h2 style="margin-bottom: 20px;">My Wishlist</h2>
+        <div id="wishlist-list"><div class="empty-msg">Loading wishlist...</div></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://mac-te-engineering.onrender.com';
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        if (!user) { window.location.href = 'auth.html'; }
+
+        async function loadWishlist() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/wishlist/${user.id}`);
+                const items = await response.json();
+                const list = document.getElementById('wishlist-list');
+                
+                if (items.length === 0) {
+                    list.innerHTML = `<div class="empty-msg">Your wishlist is empty.</div>`;
+                    return;
+                }
+                
+                list.innerHTML = items.map(item => `
+                    <div class="wishlist-item">
+                        <img src="${item.main_image || 'https://images.pexels.com/photos/280229/pexels-photo-280229.jpeg'}" alt="${item.name}">
+                        <div class="wishlist-item-details">
+                            <h4>${item.name}</h4>
+                            <div class="price">₦${Number(item.price_ngn).toLocaleString()}</div>
+                        </div>
+                        <button class="remove-btn" onclick="removeFromWishlist('${item.id}')">Remove</button>
+                    </div>
+                `).join('');
+            } catch (error) { console.error(error); }
+        }
+
+        async function removeFromWishlist(wishlistId) {
+            try {
+                const response = await fetch(`${BASE_URL}/api/wishlist/remove/${wishlistId}`, { method: 'DELETE' });
+                const data = await response.json();
+                if (data.message) { alert('✅ Removed'); loadWishlist(); }
+            } catch (error) { alert('Network error.'); }
+        }
+
+        loadWishlist();
+    </script>
+</body>
+</html>

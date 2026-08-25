@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Cart | Mac-TE Engineering</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .page-container { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        .cart-item { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .cart-item img { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; }
+        .cart-item-details { flex: 1; }
+        .cart-item-details h4 { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+        .cart-item-details .price { font-size: 16px; font-weight: 800; color: #ff9900; }
+        .cart-item-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+        .qty-btn { background: #f5f5f5; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+        .remove-btn { background: #ff4757; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+        .cart-summary { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+        .summary-row.total { font-size: 20px; font-weight: 800; border-top: 2px solid #f5f5f5; padding-top: 12px; }
+        .checkout-btn { width: 100%; background: #ff9900; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 12px; }
+        .empty-msg { text-align: center; color: #999; padding: 40px; }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <div class="logo" onclick="window.location.href='index.html'">Mac-TE <span>Engineering</span></div>
+        <div class="nav-right">
+            <div class="nav-link" onclick="window.location.href='index.html'"><i class="fas fa-store"></i> Shop</div>
+            <div class="nav-link" onclick="window.location.href='orders.html'"><i class="fas fa-box"></i> Orders</div>
+            <div class="nav-link" onclick="window.location.href='profile.html'"><i class="fas fa-user"></i> Account</div>
+        </div>
+    </div>
+
+    <div class="page-container">
+        <h2 style="margin-bottom: 20px;">Your Cart</h2>
+        <div id="cart-list"><div class="empty-msg">Loading cart...</div></div>
+        <div id="cart-summary" class="cart-summary" style="display:none;">
+            <div class="summary-row"><span>Subtotal</span><span id="subtotal">₦0.00</span></div>
+            <div class="summary-row"><span>Delivery</span><span>₦2,500.00</span></div>
+            <div class="summary-row total"><span>Total</span><span id="total">₦0.00</span></div>
+            <button class="checkout-btn" onclick="checkout()">Checkout</button>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://mac-te-engineering.onrender.com';
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        if (!user) { window.location.href = 'auth.html'; }
+
+        async function loadCart() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/cart/${user.id}`);
+                const items = await response.json();
+                const list = document.getElementById('cart-list');
+                
+                if (items.length === 0) {
+                    list.innerHTML = `<div class="empty-msg">Your cart is empty.</div>`;
+                    document.getElementById('cart-summary').style.display = 'none';
+                    return;
+                }
+                
+                list.innerHTML = items.map(item => `
+                    <div class="cart-item">
+                        <img src="${item.main_image || 'https://images.pexels.com/photos/280229/pexels-photo-280229.jpeg'}" alt="${item.name}">
+                        <div class="cart-item-details">
+                            <h4>${item.name}</h4>
+                            <div class="price">₦${Number(item.price_ngn).toLocaleString()}</div>
+                            <div class="cart-item-actions">
+                                <button class="qty-btn" onclick="updateQty('${item.item_id}', ${item.quantity - 1})">-</button>
+                                <span>${item.quantity}</span>
+                                <button class="qty-btn" onclick="updateQty('${item.item_id}', ${item.quantity + 1})">+</button>
+                                <button class="remove-btn" onclick="removeItem('${item.item_id}')">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                let subtotal = 0;
+                items.forEach(item => { subtotal += (Number(item.price_ngn) * item.quantity); });
+                document.getElementById('subtotal').innerText = `₦${subtotal.toLocaleString()}`;
+                document.getElementById('total').innerText = `₦${(subtotal + 2500).toLocaleString()}`;
+                document.getElementById('cart-summary').style.display = 'block';
+            } catch (error) { console.error(error); }
+        }
+
+        async function updateQty(itemId, qty) {
+            if (qty < 1) { await removeItem(itemId); return; }
+            try {
+                const response = await fetch(`${BASE_URL}/api/cart/update`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item_id: itemId, quantity: qty })
+                });
+                const data = await response.json();
+                if (data.message) loadCart();
+            } catch (error) { alert('Network error.'); }
+        }
+
+        async function removeItem(itemId) {
+            try {
+                const response = await fetch(`${BASE_URL}/api/cart/remove/${itemId}`, { method: 'DELETE' });
+                const data = await response.json();
+                if (data.message) { alert('✅ Item removed!'); loadCart(); }
+            } catch (error) { alert('Network error.'); }
+        }
+
+async function checkout() {
+    const total = document.getElementById('total').innerText.replace('₦', '').replace(/,/g, '');
+    try {
+        // Create the order first so it appears in order history
+        await fetch(`${BASE_URL}/api/orders`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: user.id,
+                total_amount: parseInt(total),
+                shipping_address: "Address will be added at delivery"
+            })
+        });
+
+        const response = await fetch(`${BASE_URL}/api/pay/initialize`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                property_id: null,
+                buyer_email: user.email,
+                amount_ngn: parseInt(total),
+                metadata: { user_id: user.id }
+            })
+        });
+        const data = await response.json();
+        if (data.status && data.data.authorization_url) {
+            window.location.href = data.data.authorization_url;
+        } else alert('Payment failed.');
+    } catch (error) { alert('Network error.'); }
+}
+
+        loadCart();
+    </script>
+</body>
+</html>

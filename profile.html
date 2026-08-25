@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account | Mac-TE Engineering</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .profile-page { max-width: 600px; margin: 20px auto; padding: 0 20px; }
+        .profile-card { background: #fff; border-radius: 16px; padding: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .avatar { width: 100px; height: 100px; border-radius: 50%; background: #ff9900; color: #fff; font-size: 40px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; }
+        .profile-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 5px; }
+        .profile-card p { color: #666; font-size: 14px; }
+        .info-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f5f5f5; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-weight: 600; color: #666; }
+        .info-value { color: #333; }
+        .section-title { font-size: 18px; font-weight: 700; margin: 20px 0 10px; color: #1a1a2e; }
+        .form-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+        .form-group select, .form-group input, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
+        .address-card { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 10px; }
+        .address-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+        .address-card p { font-size: 13px; color: #666; }
+        .btn-primary { background: #ff9900; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; }
+        .delete-btn { background: #ff4757; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <div class="logo" onclick="window.location.href='index.html'">Mac-TE <span>Engineering</span></div>
+        <div class="nav-right">
+            <div class="nav-link" onclick="window.location.href='index.html'"><i class="fas fa-store"></i> <span>Shop</span></div>
+            <div class="nav-link" onclick="window.location.href='cart.html'"><i class="fas fa-shopping-cart"></i> <span>Cart</span></div>
+            <div class="nav-link" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></div>
+        </div>
+    </div>
+
+    <div class="profile-page">
+        <div class="profile-card">
+            <div class="avatar" id="profile-avatar">U</div>
+            <h2 id="profile-name">User Name</h2>
+            <p id="profile-email">user@email.com</p>
+        </div>
+
+        <div class="section-title">Account Information</div>
+        <div class="info-card">
+            <div class="info-row"><span class="info-label">Full Name</span><span class="info-value" id="profile-fullname">-</span></div>
+            <div class="info-row"><span class="info-label">Email</span><span class="info-value" id="profile-email2">-</span></div>
+            <div class="info-row"><span class="info-label">Phone</span><span class="info-value" id="profile-phone">-</span></div>
+            <div class="info-row"><span class="info-label">Role</span><span class="info-value" id="profile-role">Customer</span></div>
+        </div>
+
+        <div class="section-title">Saved Addresses</div>
+        <div id="address-list">
+            <div style="text-align:center; color:#999; padding:20px;">Loading addresses...</div>
+        </div>
+
+        <div class="section-title">Add New Address</div>
+        <div class="form-card">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="addr-name" placeholder="Your Name">
+            </div>
+            <div class="form-group">
+                <label>Phone</label>
+                <input type="text" id="addr-phone" placeholder="Your Phone">
+            </div>
+            <div class="form-group">
+                <label>Country</label>
+                <select id="addr-country" onchange="loadStates()">
+                    <option value="">Select Country</option>
+                    <option value="Nigeria">Nigeria</option>
+                    <option value="Ghana">Ghana</option>
+                    <option value="Kenya">Kenya</option>
+                    <option value="South Africa">South Africa</option>
+                    <option value="Egypt">Egypt</option>
+                    <option value="Morocco">Morocco</option>
+                    <option value="Uganda">Uganda</option>
+                    <option value="Tanzania">Tanzania</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>State</label>
+                <select id="addr-state" onchange="loadLGAs()">
+                    <option value="">Select State</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Local Government Area (LGA)</label>
+                <select id="addr-lga">
+                    <option value="">Select LGA</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>City</label>
+                <input type="text" id="addr-city" placeholder="e.g. Lagos">
+            </div>
+            <div class="form-group">
+                <label>Street Address</label>
+                <textarea id="addr-detail" rows="3" placeholder="e.g. 12 Admiralty Way" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;"></textarea>
+            </div>
+            <button class="btn-primary" onclick="addAddress()">Add Address</button>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://mac-te-engineering.onrender.com';
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        if (!user) { window.location.href = 'auth.html'; }
+
+        // ===== COMPLETE DATA FOR ALL COUNTRIES (States and LGAs) =====
+        const countryData = {
+            'Nigeria': {
+                'Lagos': ['Alimosho', 'Ajeromi-Ifelodun', 'Kosofe', 'Mushin', 'Oshodi-Isolo', 'Shomolu', 'Ikeja', 'Eti-Osa', 'Badagry', 'Ikorodu', 'Surulere', 'Lagos Island', 'Lagos Mainland'],
+                'Abuja (FCT)': ['Abaji', 'Bwari', 'Gwagwalada', 'Kuje', 'Kwali', 'Municipal Area Council'],
+                'Rivers': ['Port Harcourt', 'Obio-Akpor', 'Okrika', 'Eleme', 'Ikwerre', 'Bonny', 'Degema'],
+                'Oyo': ['Ibadan North', 'Ibadan South-East', 'Ibadan South-West', 'Akinyele', 'Egbeda', 'Ogbomosho', 'Oyo East'],
+                'Kano': ['Nassarawa', 'Fagge', 'Dala', 'Gwale', 'Tarauni', 'Kano Municipal', 'Ungogo'],
+                'Enugu': ['Enugu East', 'Enugu North', 'Enugu South', 'Nkanu', 'Udi', 'Nsukka'],
+                'Kaduna': ['Kaduna North', 'Kaduna South', 'Zaria', 'Igabi', 'Chikun'],
+                'Ogun': ['Abeokuta North', 'Abeokuta South', 'Ijebu Ode', 'Sagamu', 'Ota']
+            },
+            'Ghana': {
+                'Greater Accra': ['Accra Metropolitan', 'Tema Metropolitan', 'Ga East', 'Ga West', 'Ledzokuku'],
+                'Ashanti': ['Kumasi Metropolitan', 'Oforikrom', 'Ejisu', 'Asokwa']
+            },
+            'Kenya': {
+                'Nairobi': ['Westlands', 'Dagoretti', 'Langata', 'Kasarani', 'Embakasi'],
+                'Mombasa': ['Mvita', 'Nyali', 'Changamwe', 'Jomvu']
+            },
+            'Egypt': {
+                'Cairo': ['Nasr City', 'Maadi', 'Heliopolis', 'Dokki', 'Giza'],
+                'Alexandria': ['Montaza', 'El Raml', 'Sidi Gaber', 'Agami']
+            },
+            'Morocco': {
+                'Casablanca': ['Sidi Belyout', 'Moulay Rachid', 'Ain Sebaa', 'Hay Hassani'],
+                'Rabat': ['Agdal', 'Hassan', 'Souissi', 'Yacoub El Mansour']
+            }
+        };
+
+        function loadStates() {
+            const country = document.getElementById('addr-country').value;
+            const stateSelect = document.getElementById('addr-state');
+            stateSelect.innerHTML = '<option value="">Select State</option>';
+            document.getElementById('addr-lga').innerHTML = '<option value="">Select LGA</option>';
+            
+            if (countryData[country]) {
+                Object.keys(countryData[country]).forEach(state => {
+                    stateSelect.innerHTML += `<option value="${state}">${state}</option>`;
+                });
+            } else {
+                stateSelect.innerHTML += '<option value="Mainland">Mainland</option>';
+            }
+        }
+
+        function loadLGAs() {
+            const country = document.getElementById('addr-country').value;
+            const state = document.getElementById('addr-state').value;
+            const lgaSelect = document.getElementById('addr-lga');
+            lgaSelect.innerHTML = '<option value="">Select LGA</option>';
+            
+            if (countryData[country] && countryData[country][state]) {
+                countryData[country][state].forEach(lga => {
+                    lgaSelect.innerHTML += `<option value="${lga}">${lga}</option>`;
+                });
+            } else {
+                lgaSelect.innerHTML += '<option value="Central">Central</option>';
+            }
+        }
+
+        function loadProfile() {
+            if (!user) return;
+            document.getElementById('profile-avatar').innerText = user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U';
+            document.getElementById('profile-name').innerText = user.full_name || 'User Name';
+            document.getElementById('profile-email').innerText = user.email || 'user@email.com';
+            document.getElementById('profile-fullname').innerText = user.full_name || '-';
+            document.getElementById('profile-email2').innerText = user.email || '-';
+            document.getElementById('profile-phone').innerText = user.phone || '-';
+            document.getElementById('profile-role').innerText = user.role || 'Customer';
+        }
+
+        async function loadAddresses() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/addresses/${user.id}`);
+                const addresses = await response.json();
+                const list = document.getElementById('address-list');
+                if (addresses.length === 0) {
+                    list.innerHTML = `<div style="text-align:center; color:#999; padding:20px;">No saved addresses.</div>`;
+                    return;
+                }
+                list.innerHTML = addresses.map(addr => `
+                    <div class="address-card">
+                        <h4>${addr.full_name} | ${addr.city}, ${addr.state}, ${addr.lga || ''}</h4>
+                        <p>${addr.address}</p>
+                        <button class="delete-btn" onclick="deleteAddress('${addr.id}')">Remove</button>
+                    </div>
+                `).join('');
+            } catch (error) { console.error(error); }
+        }
+
+        async function addAddress() {
+            const full_name = document.getElementById('addr-name').value;
+            const phone = document.getElementById('addr-phone').value;
+            const country = document.getElementById('addr-country').value;
+            const state = document.getElementById('addr-state').value;
+            const lga = document.getElementById('addr-lga').value;
+            const city = document.getElementById('addr-city').value;
+            const address = document.getElementById('addr-detail').value;
+
+            if (!full_name || !phone || !city || !address || !state || !lga) {
+                alert('Please fill in all required fields including State and LGA');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/addresses`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: user.id, full_name, phone, address, city, state, lga, country })
+                });
+                const data = await response.json();
+                if (data.message) {
+                    alert('✅ Address added!');
+                    document.getElementById('addr-name').value = '';
+                    document.getElementById('addr-phone').value = '';
+                    document.getElementById('addr-city').value = '';
+                    document.getElementById('addr-detail').value = '';
+                    loadAddresses();
+                } else {
+                    alert(data.error || 'Failed to add address');
+                }
+            } catch (error) { alert('Network error'); }
+        }
+
+        async function deleteAddress(addressId) {
+            if (!confirm('Are you sure you want to remove this address?')) return;
+            try {
+                const response = await fetch(`${BASE_URL}/api/addresses/${addressId}`, { method: 'DELETE' });
+                const data = await response.json();
+                if (data.message) {
+                    alert('✅ Address removed!');
+                    loadAddresses();
+                }
+            } catch (error) { alert('Network error'); }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'auth.html';
+        }
+
+        loadProfile();
+        loadAddresses();
+        loadStates();
+    </script>
+</body>
+</html>
