@@ -77,7 +77,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize database tables
+// Initialize database tables (NO // comments inside SQL)
 const initDB = async () => {
   try {
     await pool.query(`
