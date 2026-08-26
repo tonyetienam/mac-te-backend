@@ -3,14 +3,12 @@ const { db } = require('./src/config/database');
 
 async function createAdmin() {
   try {
-    console.log('🔐 Creating admin account...');
+    console.log('Creating admin account...');
 
     const existing = await db.getAsync('SELECT * FROM users WHERE email = ?', ['admin@mac-te.com']);
 
     if (existing) {
-      console.log('✅ Admin already exists:');
-      console.log('📧 Email:', existing.email);
-      console.log('🔑 Password: Admin@123');
+      console.log('Admin already exists:', existing.email);
       process.exit(0);
       return;
     }
@@ -19,18 +17,18 @@ async function createAdmin() {
     const hashedPassword = await bcrypt.hash('Admin@123', salt);
     const id = 'admin_' + Date.now();
 
-    await db.runAsync(`
-      INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id, 'admin@mac-te.com', hashedPassword, 'Admin', 'User', '08012345678', 'admin', 1]);
+    await db.runAsync(
+      'INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, 'admin@mac-te.com', hashedPassword, 'Admin', 'User', '08012345678', 'admin', 1]
+    );
 
-    console.log('✅ Admin created successfully!');
-    console.log('📧 Email: admin@mac-te.com');
-    console.log('🔑 Password: Admin@123');
+    console.log('Admin created successfully!');
+    console.log('Email: admin@mac-te.com');
+    console.log('Password: Admin@123');
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error creating admin:', error);
+    console.error('Error creating admin:', error);
     process.exit(1);
   }
 }

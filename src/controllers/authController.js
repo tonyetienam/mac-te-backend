@@ -10,15 +10,16 @@ const generateToken = (userId, role) => {
   );
 };
 
-// Register user
+// REGISTER
 const register = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, role = 'customer' } = req.body;
+    const { email, password, firstName, lastName, phone, role } = req.body;
+    const userRole = role || 'customer';
 
     if (!email || !password || !firstName || !lastName) {
       return res.status(400).json({
         status: 'error',
-        message: 'All fields are required',
+        message: 'All fields are required'
       });
     }
 
@@ -32,7 +33,7 @@ const register = async (req, res) => {
     if (existing) {
       return res.status(409).json({
         status: 'error',
-        message: 'User already exists',
+        message: 'User already exists'
       });
     }
 
@@ -40,60 +41,51 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
     const id = 'u' + Date.now();
 
-    let userRole = 'customer';
     let isActive = 1;
-
-    if (role === 'seller') {
-      userRole = 'seller';
+    let finalRole = 'customer';
+    if (userRole === 'seller') {
+      finalRole = 'seller';
       isActive = 0;
-    } else if (role === 'admin') {
-      userRole = 'admin';
+    } else if (userRole === 'admin') {
+      finalRole = 'admin';
       isActive = 1;
     }
 
     await new Promise((resolve, reject) => {
-      db.run(`
-        INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [id, email, hashedPassword, firstName, lastName, phone || '', userRole, isActive], function(err) {
-        if (err) reject(err);
-        else resolve(this);
-      });
-    });
-
-    const user = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT id, email, first_name, last_name, phone, role, is_active, created_at FROM users WHERE id = ?',
-        [id],
-        (err, row) => {
+      db.run(
+        'INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, email, hashedPassword, firstName, lastName, phone || '', finalRole, isActive],
+        function(err) {
           if (err) reject(err);
-          else resolve(row);
+          else resolve(this);
         }
       );
     });
 
-    const token = generateToken(user.id, user.role);
+    const user = await new Promise((resolve, reject) => {
+      db.get('SELECT id, email, first_name, last_name, phone, role, is_active, created_at FROM users WHERE id = ?', [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
 
-    console.log(`✅ User registered: ${email} as ${userRole}`);
+    const token = generateToken(user.id, user.role);
 
     res.status(201).json({
       status: 'success',
-      data: {
-        user: user,
-        token: token
-      }
+      data: { user, token }
     });
 
   } catch (error) {
-    console.error('❌ Registration error:', error);
+    console.error('Register error:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Registration failed: ' + error.message,
+      message: 'Registration failed'
     });
   }
 };
 
-// ⭐⭐⭐ LOGIN - COMPLETELY FIXED ⭐⭐⭐
+// LOGIN
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -101,58 +93,52 @@ const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         status: 'error',
-        message: 'Email and password are required',
+        message: 'Email and password are required'
       });
     }
 
     console.log('🔐 Login attempt:', email);
 
-    // Get user from database
     const user = await new Promise((resolve, reject) => {
       db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
         if (err) {
-          console.error('❌ Database error:', err);
+          console.error('Database error:', err);
           reject(err);
         } else {
-          console.log('📦 Raw user from DB:', JSON.stringify(row, null, 2));
+          console.log('✅ Raw user from DB:', JSON.stringify(row));
           resolve(row);
         }
       });
     });
 
     if (!user) {
-      console.log('❌ User not found:', email);
+      console.log('❌ User not found');
       return res.status(401).json({
         status: 'error',
-        message: 'Invalid credentials',
+        message: 'Invalid credentials'
       });
     }
 
-    console.log('✅ User found in DB:', user.email);
+    console.log('✅ User found:', user.email);
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    if (!isValidPassword) {
-      console.log('❌ Invalid password for:', email);
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) {
+      console.log('❌ Invalid password');
       return res.status(401).json({
         status: 'error',
-        message: 'Invalid credentials',
+        message: 'Invalid credentials'
       });
     }
 
-    // Check if account is active
     if (!user.is_active) {
-      console.log('❌ Account inactive:', email);
       return res.status(403).json({
         status: 'error',
-        message: 'Account is deactivated or pending approval',
+        message: 'Account is deactivated'
       });
     }
 
-    // Generate token
     const token = generateToken(user.id, user.role);
 
-    // ⭐ CRITICAL: Create userData with ALL fields
     const userData = {
       id: user.id,
       email: user.email,
@@ -164,10 +150,8 @@ const login = async (req, res) => {
       created_at: user.created_at || new Date().toISOString()
     };
 
-    console.log('✅ Login successful:', email);
-    console.log('📦 User data being returned:', JSON.stringify(userData, null, 2));
+    console.log('📤 Returning user data:', JSON.stringify(userData));
 
-    // ⭐ CRITICAL: Send back userData INSIDE data.user
     res.status(200).json({
       status: 'success',
       data: {
@@ -180,12 +164,12 @@ const login = async (req, res) => {
     console.error('❌ Login error:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Login failed: ' + error.message,
+      message: 'Login failed: ' + error.message
     });
   }
 };
 
-// Get current user
+// GET CURRENT USER - Added this function
 const getCurrentUser = async (req, res) => {
   try {
     const user = await new Promise((resolve, reject) => {
@@ -202,7 +186,7 @@ const getCurrentUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         status: 'error',
-        message: 'User not found',
+        message: 'User not found'
       });
     }
 
@@ -212,140 +196,10 @@ const getCurrentUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Get current user error:', error);
+    console.error('Get user error:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Failed to get user',
-    });
-  }
-};
-
-// Get all sellers (admin only)
-const getSellers = async (req, res) => {
-  try {
-    const sellers = await new Promise((resolve, reject) => {
-      db.all(`
-        SELECT id, email, first_name, last_name, phone, is_active, created_at 
-        FROM users WHERE role = 'seller' ORDER BY created_at DESC
-      `, [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: sellers,
-    });
-
-  } catch (error) {
-    console.error('❌ Error fetching sellers:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch sellers',
-    });
-  }
-};
-
-// Get all customers (admin only)
-const getAllCustomers = async (req, res) => {
-  try {
-    const customers = await new Promise((resolve, reject) => {
-      db.all(`
-        SELECT id, email, first_name, last_name, phone, role, is_active, created_at 
-        FROM users WHERE role = 'customer' ORDER BY created_at DESC
-      `, [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: customers,
-    });
-
-  } catch (error) {
-    console.error('❌ Error fetching customers:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch customers',
-    });
-  }
-};
-
-// Get all users (admin only)
-const getAllUsers = async (req, res) => {
-  try {
-    const users = await new Promise((resolve, reject) => {
-      db.all(`
-        SELECT id, email, first_name, last_name, phone, role, is_active, created_at 
-        FROM users ORDER BY created_at DESC
-      `, [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: users,
-    });
-
-  } catch (error) {
-    console.error('❌ Error fetching users:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch users',
-    });
-  }
-};
-
-// Approve seller (admin only)
-const approveSeller = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await new Promise((resolve, reject) => {
-      db.run(
-        'UPDATE users SET is_active = 1 WHERE id = ? AND role = ?',
-        [id, 'seller'],
-        function(err) {
-          if (err) reject(err);
-          else resolve(this);
-        }
-      );
-    });
-
-    if (result.changes === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Seller not found',
-      });
-    }
-
-    const seller = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT id, email, first_name, last_name, is_active FROM users WHERE id = ? AND role = ?',
-        [id, 'seller'],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
-    });
-
-    console.log(`✅ Seller approved: ${seller.email}`);
-
-    res.status(200).json({
-      status: 'success',
-      data: seller,
-    });
-
-  } catch (error) {
-    console.error('❌ Error approving seller:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to approve seller',
+      message: 'Failed to get user'
     });
   }
 };
@@ -353,9 +207,5 @@ const approveSeller = async (req, res) => {
 module.exports = {
   register,
   login,
-  getCurrentUser,
-  getSellers,
-  getAllCustomers,
-  getAllUsers,
-  approveSeller,
+  getCurrentUser
 };
