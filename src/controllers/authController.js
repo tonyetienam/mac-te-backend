@@ -22,13 +22,7 @@ const register = async (req, res) => {
       });
     }
 
-    const existing = await new Promise((resolve, reject) => {
-      db.get('SELECT id FROM users WHERE email = ?', [email], (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
-
+    const existing = await db.getAsync('SELECT id FROM users WHERE email = ?', [email]);
     if (existing) {
       return res.status(409).json({
         status: 'error',
@@ -51,26 +45,15 @@ const register = async (req, res) => {
       isActive = 1;
     }
 
-    await new Promise((resolve, reject) => {
-      db.run(`
-        INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [id, email, hashedPassword, firstName, lastName, phone || '', userRole, isActive], function(err) {
-        if (err) reject(err);
-        else resolve(this);
-      });
-    });
+    await db.runAsync(`
+      INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id, email, hashedPassword, firstName, lastName, phone || '', userRole, isActive]);
 
-    const user = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT id, email, first_name, last_name, phone, role, is_active, created_at FROM users WHERE id = ?',
-        [id],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
-    });
+    const user = await db.getAsync(
+      'SELECT id, email, first_name, last_name, phone, role, is_active, created_at FROM users WHERE id = ?',
+      [id]
+    );
 
     const token = generateToken(user.id, user.role);
 
@@ -93,7 +76,7 @@ const register = async (req, res) => {
   }
 };
 
-// ⭐ FIXED LOGIN FUNCTION - RETURNS COMPLETE USER DATA
+// Login - Returns complete user data
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -107,13 +90,7 @@ const login = async (req, res) => {
 
     console.log('🔐 Login attempt:', email);
 
-    // Get user from database
-    const user = await new Promise((resolve, reject) => {
-      db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
+    const user = await db.getAsync('SELECT * FROM users WHERE email = ?', [email]);
     
     if (!user) {
       console.log('❌ User not found:', email);
@@ -123,9 +100,8 @@ const login = async (req, res) => {
       });
     }
 
-    console.log('📦 User found in DB:', JSON.stringify(user, null, 2));
+    console.log('📦 User found:', JSON.stringify(user, null, 2));
 
-    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
       console.log('❌ Invalid password for:', email);
@@ -135,19 +111,15 @@ const login = async (req, res) => {
       });
     }
 
-    // Check if account is active
     if (!user.is_active) {
-      console.log('❌ Account inactive:', email);
       return res.status(403).json({
         status: 'error',
         message: 'Account is deactivated or pending approval',
       });
     }
 
-    // Generate token
     const token = generateToken(user.id, user.role);
 
-    // ⭐ CRITICAL: Build user data with ALL fields
     const userData = {
       id: user.id,
       email: user.email,
@@ -160,7 +132,7 @@ const login = async (req, res) => {
     };
 
     console.log('✅ Login successful:', email);
-    console.log('📦 User data being returned:', JSON.stringify(userData, null, 2));
+    console.log('📦 User data returned:', JSON.stringify(userData, null, 2));
 
     res.status(200).json({
       status: 'success',
@@ -182,16 +154,10 @@ const login = async (req, res) => {
 // Get current user
 const getCurrentUser = async (req, res) => {
   try {
-    const user = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT id, email, first_name, last_name, phone, role, is_active, created_at FROM users WHERE id = ?',
-        [req.user.id],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
-    });
+    const user = await db.getAsync(
+      'SELECT id, email, first_name, last_name, phone, role, is_active, created_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
 
     if (!user) {
       return res.status(404).json({
@@ -214,18 +180,13 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
-// Get all sellers (admin only)
+// Admin routes
 const getSellers = async (req, res) => {
   try {
-    const sellers = await new Promise((resolve, reject) => {
-      db.all(`
-        SELECT id, email, first_name, last_name, phone, is_active, created_at 
-        FROM users WHERE role = 'seller' ORDER BY created_at DESC
-      `, [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
+    const sellers = await db.allAsync(`
+      SELECT id, email, first_name, last_name, phone, is_active, created_at 
+      FROM users WHERE role = 'seller' ORDER BY created_at DESC
+    `);
 
     res.status(200).json({
       status: 'success',
@@ -241,18 +202,12 @@ const getSellers = async (req, res) => {
   }
 };
 
-// Get all customers (admin only)
 const getAllCustomers = async (req, res) => {
   try {
-    const customers = await new Promise((resolve, reject) => {
-      db.all(`
-        SELECT id, email, first_name, last_name, phone, role, is_active, created_at 
-        FROM users WHERE role = 'customer' ORDER BY created_at DESC
-      `, [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
+    const customers = await db.allAsync(`
+      SELECT id, email, first_name, last_name, phone, role, is_active, created_at 
+      FROM users WHERE role = 'customer' ORDER BY created_at DESC
+    `);
 
     res.status(200).json({
       status: 'success',
@@ -268,18 +223,12 @@ const getAllCustomers = async (req, res) => {
   }
 };
 
-// Get all users (admin only)
 const getAllUsers = async (req, res) => {
   try {
-    const users = await new Promise((resolve, reject) => {
-      db.all(`
-        SELECT id, email, first_name, last_name, phone, role, is_active, created_at 
-        FROM users ORDER BY created_at DESC
-      `, [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
+    const users = await db.allAsync(`
+      SELECT id, email, first_name, last_name, phone, role, is_active, created_at 
+      FROM users ORDER BY created_at DESC
+    `);
 
     res.status(200).json({
       status: 'success',
@@ -295,20 +244,13 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// Approve seller (admin only)
 const approveSeller = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await new Promise((resolve, reject) => {
-      db.run(
-        'UPDATE users SET is_active = 1 WHERE id = ? AND role = ?',
-        [id, 'seller'],
-        function(err) {
-          if (err) reject(err);
-          else resolve(this);
-        }
-      );
-    });
+    const result = await db.runAsync(
+      'UPDATE users SET is_active = 1 WHERE id = ? AND role = ?',
+      [id, 'seller']
+    );
 
     if (result.changes === 0) {
       return res.status(404).json({
@@ -317,16 +259,10 @@ const approveSeller = async (req, res) => {
       });
     }
 
-    const seller = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT id, email, first_name, last_name, is_active FROM users WHERE id = ? AND role = ?',
-        [id, 'seller'],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
-    });
+    const seller = await db.getAsync(
+      'SELECT id, email, first_name, last_name, is_active FROM users WHERE id = ? AND role = ?',
+      [id, 'seller']
+    );
 
     console.log(`✅ Seller approved: ${seller.email}`);
 

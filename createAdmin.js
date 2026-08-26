@@ -5,37 +5,28 @@ async function createAdmin() {
   try {
     console.log('🔐 Creating admin account...');
 
-    // Check if admin exists
     const existing = await db.getAsync('SELECT * FROM users WHERE email = ?', ['admin@mac-te.com']);
 
     if (existing) {
       console.log('✅ Admin already exists:');
       console.log('📧 Email:', existing.email);
       console.log('🔑 Password: Admin@123');
-      console.log('👤 Role:', existing.role);
-      console.log('📋 Full user:', existing);
       process.exit(0);
       return;
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('Admin@123', salt);
     const id = 'admin_' + Date.now();
 
-    // Create admin
     await db.runAsync(`
       INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [id, 'admin@mac-te.com', hashedPassword, 'Admin', 'User', '08012345678', 'admin', 1]);
 
-    const user = await db.getAsync('SELECT * FROM users WHERE id = ?', [id]);
-
     console.log('✅ Admin created successfully!');
-    console.log('📧 Email:', user.email);
+    console.log('📧 Email: admin@mac-te.com');
     console.log('🔑 Password: Admin@123');
-    console.log('👤 Role:', user.role);
-    console.log('📋 Full user:', user);
 
     process.exit(0);
   } catch (error) {

@@ -10,7 +10,6 @@ if (!fs.existsSync(dataDir)) {
 
 const dbPath = path.join(dataDir, 'mac-te.db');
 
-// Create database connection
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('❌ Database connection error:', err);
@@ -19,7 +18,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Enable foreign keys
 db.run('PRAGMA foreign_keys = ON');
 
 // Create tables
@@ -69,42 +67,6 @@ db.serialize(() => {
       estimated_delivery_date TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS order_items (
-      id TEXT PRIMARY KEY,
-      order_id TEXT NOT NULL,
-      product_id TEXT NOT NULL,
-      quantity INTEGER NOT NULL,
-      price REAL NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (order_id) REFERENCES orders(id),
-      FOREIGN KEY (product_id) REFERENCES products(id)
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS password_resets (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      otp TEXT NOT NULL,
-      expires_at TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      message TEXT NOT NULL,
-      response TEXT,
-      intent TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
