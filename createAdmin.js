@@ -9,9 +9,11 @@ async function createAdmin() {
     const existing = await db.getAsync('SELECT * FROM users WHERE email = ?', ['admin@mac-te.com']);
 
     if (existing) {
-      console.log('✅ Admin already exists:', existing.email);
+      console.log('✅ Admin already exists:');
       console.log('📧 Email:', existing.email);
       console.log('🔑 Password: Admin@123');
+      console.log('👤 Role:', existing.role);
+      console.log('📋 Full user:', existing);
       process.exit(0);
       return;
     }
@@ -27,9 +29,13 @@ async function createAdmin() {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [id, 'admin@mac-te.com', hashedPassword, 'Admin', 'User', '08012345678', 'admin', 1]);
 
+    const user = await db.getAsync('SELECT * FROM users WHERE id = ?', [id]);
+
     console.log('✅ Admin created successfully!');
-    console.log('📧 Email: admin@mac-te.com');
+    console.log('📧 Email:', user.email);
     console.log('🔑 Password: Admin@123');
+    console.log('👤 Role:', user.role);
+    console.log('📋 Full user:', user);
 
     process.exit(0);
   } catch (error) {

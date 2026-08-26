@@ -19,7 +19,7 @@ const getProducts = async (req, res) => {
 
     query += " ORDER BY created_at DESC";
 
-    const products = db.prepare(query).all(params);
+    const products = await db.allAsync(query, params);
 
     res.status(200).json({
       status: 'success',
@@ -38,9 +38,10 @@ const getProducts = async (req, res) => {
 const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = db.prepare(`
-      SELECT * FROM products WHERE id = ? AND is_active = 1
-    `).get(id);
+    const product = await db.getAsync(
+      'SELECT * FROM products WHERE id = ? AND is_active = 1',
+      [id]
+    );
 
     if (!product) {
       return res.status(404).json({
@@ -79,12 +80,12 @@ const createProduct = async (req, res) => {
     const priceNgn = parseFloat(price);
     const stockQuantity = parseInt(stock) || 0;
 
-    db.prepare(`
+    await db.runAsync(`
       INSERT INTO products (id, name, description, price_ngn, category, image_url, stock_quantity, seller_id, is_active, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, name, description, priceNgn, category, image || '', stockQuantity, sellerId, 1, new Date().toISOString());
+    `, [id, name, description, priceNgn, category, image || '', stockQuantity, sellerId, 1, new Date().toISOString()]);
 
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    const product = await db.getAsync('SELECT * FROM products WHERE id = ?', [id]);
 
     res.status(201).json({
       status: 'success',
@@ -107,7 +108,7 @@ const updateProduct = async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    const existing = await db.getAsync('SELECT * FROM products WHERE id = ?', [id]);
     if (!existing) {
       return res.status(404).json({
         status: 'error',
@@ -143,9 +144,9 @@ const updateProduct = async (req, res) => {
     params.push(new Date().toISOString());
     params.push(id);
 
-    db.prepare(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`).run(params);
+    await db.runAsync(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, params);
 
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    const product = await db.getAsync('SELECT * FROM products WHERE id = ?', [id]);
 
     res.status(200).json({
       status: 'success',
@@ -167,7 +168,7 @@ const deleteProduct = async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    const existing = await db.getAsync('SELECT * FROM products WHERE id = ?', [id]);
     if (!existing) {
       return res.status(404).json({
         status: 'error',
@@ -182,8 +183,7 @@ const deleteProduct = async (req, res) => {
       });
     }
 
-    db.prepare('UPDATE products SET is_active = 0, updated_at = ? WHERE id = ?')
-      .run(new Date().toISOString(), id);
+    await db.runAsync('UPDATE products SET is_active = 0, updated_at = ? WHERE id = ?', [new Date().toISOString(), id]);
 
     res.status(200).json({
       status: 'success',
@@ -198,32 +198,10 @@ const deleteProduct = async (req, res) => {
   }
 };
 
-// Get seller products
-const getSellerProducts = async (req, res) => {
-  try {
-    const sellerId = req.user.id;
-    const products = db.prepare(`
-      SELECT * FROM products WHERE seller_id = ? AND is_active = 1 ORDER BY created_at DESC
-    `).all(sellerId);
-
-    res.status(200).json({
-      status: 'success',
-      data: products,
-    });
-  } catch (error) {
-    console.error('Error fetching seller products:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch products',
-    });
-  }
-};
-
 module.exports = {
   getProducts,
   getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
-  getSellerProducts,
 };

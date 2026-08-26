@@ -8,7 +8,6 @@ router.get('/', productController.getProducts);
 router.get('/:id', productController.getProductById);
 
 // Authenticated routes
-router.get('/my-products', authenticate, productController.getSellerProducts);
 router.post('/', authenticate, productController.createProduct);
 router.put('/:id', authenticate, productController.updateProduct);
 router.delete('/:id', authenticate, productController.deleteProduct);
