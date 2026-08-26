@@ -3,46 +3,27 @@ const { db } = require('../config/database');
 // Get all products
 const getProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 20, category, search } = req.query;
-    const offset = (page - 1) * limit;
+    const { category, search } = req.query;
+    let query = "SELECT * FROM products WHERE is_active = 1";
+    let params = [];
 
-    let query = 'SELECT * FROM products WHERE is_active = 1';
-    const params = [];
-
-    if (category) {
+    if (category && category !== 'all') {
+      query += " AND category = ?";
       params.push(category);
-      query += ` AND category = ?`;
     }
 
     if (search) {
-      params.push(`%${search}%`);
-      query += ` AND (name LIKE ? OR description LIKE ?)`;
-      params.push(`%${search}%`);
+      query += " AND (name LIKE ? OR description LIKE ?)";
+      params.push(`%${search}%`, `%${search}%`);
     }
 
-    const countQuery = `SELECT COUNT(*) as total FROM products WHERE is_active = 1${category ? ' AND category = ?' : ''}${search ? ' AND (name LIKE ? OR description LIKE ?)' : ''}`;
-    const countParams = [];
-    
-    if (category) countParams.push(category);
-    if (search) {
-      countParams.push(`%${search}%`);
-      countParams.push(`%${search}%`);
-    }
+    query += " ORDER BY created_at DESC";
 
-    const total = db.prepare(countQuery).get(...countParams).total;
-    
-    params.push(parseInt(limit), offset);
-    const products = db.prepare(query + ' ORDER BY created_at DESC LIMIT ? OFFSET ?').all(...params);
+    const products = db.prepare(query).all(params);
 
     res.status(200).json({
       status: 'success',
       data: products,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
     });
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -53,10 +34,13 @@ const getProducts = async (req, res) => {
   }
 };
 
-// Get single product
+// Get product by ID
 const getProductById = async (req, res) => {
   try {
-    const product = db.prepare('SELECT * FROM products WHERE id = ? AND is_active = 1').get(req.params.id);
+    const { id } = req.params;
+    const product = db.prepare(`
+      SELECT * FROM products WHERE id = ? AND is_active = 1
+    `).get(id);
 
     if (!product) {
       return res.status(404).json({
@@ -78,23 +62,27 @@ const getProductById = async (req, res) => {
   }
 };
 
-// Create new product
+// Create product
 const createProduct = async (req, res) => {
   try {
-    const { name, description, category, price_ngn, price_usd, stock_quantity, main_image, images, seller_id, location, delivery_days, old_price, discounted_price, promo_ends_at } = req.body;
+    const { name, description, price, category, image, stock } = req.body;
+    const sellerId = req.user.id;
 
-    if (!name || !price_ngn) {
+    if (!name || !description || !price || !category) {
       return res.status(400).json({
         status: 'error',
-        message: 'Name and price are required',
+        message: 'Name, description, price, and category are required',
       });
     }
 
     const id = 'p' + Date.now();
+    const priceNgn = parseFloat(price);
+    const stockQuantity = parseInt(stock) || 0;
+
     db.prepare(`
-      INSERT INTO products (id, name, description, category, price_ngn, price_usd, stock_quantity, main_image, images, seller_id, location, delivery_days, old_price, discounted_price, promo_ends_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, name, description, category, price_ngn, price_usd, stock_quantity, main_image, images || '[]', seller_id, location, delivery_days, old_price, discounted_price, promo_ends_at);
+      INSERT INTO products (id, name, description, price_ngn, category, image_url, stock_quantity, seller_id, is_active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, name, description, priceNgn, category, image || '', stockQuantity, sellerId, 1, new Date().toISOString());
 
     const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
 
@@ -115,37 +103,47 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const { name, description, price, category, image, stock } = req.body;
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
-    const allowedFields = [
-      'name', 'description', 'category', 'price_ngn', 'price_usd',
-      'stock_quantity', 'main_image', 'images', 'is_active', 'location',
-      'delivery_days', 'old_price', 'discounted_price', 'promo_ends_at'
-    ];
-
-    const updateFields = Object.keys(updates).filter(
-      (key) => allowedFields.includes(key) && updates[key] !== undefined
-    );
-
-    if (updateFields.length === 0) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'No valid fields to update',
-      });
-    }
-
-    const setClause = updateFields.map(field => `${field} = ?`).join(', ');
-    const values = updateFields.map(field => updates[field]);
-    values.push(id);
-
-    const result = db.prepare(`UPDATE products SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
-
-    if (result.changes === 0) {
+    const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    if (!existing) {
       return res.status(404).json({
         status: 'error',
         message: 'Product not found',
       });
     }
+
+    if (existing.seller_id !== userId && userRole !== 'admin') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You do not have permission to update this product',
+      });
+    }
+
+    const updates = [];
+    const params = [];
+
+    if (name) { updates.push("name = ?"); params.push(name); }
+    if (description) { updates.push("description = ?"); params.push(description); }
+    if (price) { updates.push("price_ngn = ?"); params.push(parseFloat(price)); }
+    if (category) { updates.push("category = ?"); params.push(category); }
+    if (image !== undefined) { updates.push("image_url = ?"); params.push(image); }
+    if (stock !== undefined) { updates.push("stock_quantity = ?"); params.push(parseInt(stock)); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No fields to update',
+      });
+    }
+
+    updates.push("updated_at = ?");
+    params.push(new Date().toISOString());
+    params.push(id);
+
+    db.prepare(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`).run(params);
 
     const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
 
@@ -162,17 +160,30 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// Delete product (soft delete)
+// Delete product
 const deleteProduct = async (req, res) => {
   try {
-    const result = db.prepare('UPDATE products SET is_active = 0 WHERE id = ?').run(req.params.id);
+    const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
-    if (result.changes === 0) {
+    const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    if (!existing) {
       return res.status(404).json({
         status: 'error',
         message: 'Product not found',
       });
     }
+
+    if (existing.seller_id !== userId && userRole !== 'admin') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You do not have permission to delete this product',
+      });
+    }
+
+    db.prepare('UPDATE products SET is_active = 0, updated_at = ? WHERE id = ?')
+      .run(new Date().toISOString(), id);
 
     res.status(200).json({
       status: 'success',
@@ -187,4 +198,32 @@ const deleteProduct = async (req, res) => {
   }
 };
 
-module.exports = { getProducts, getProductById, createProduct, updateProduct, deleteProduct };
+// Get seller products
+const getSellerProducts = async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const products = db.prepare(`
+      SELECT * FROM products WHERE seller_id = ? AND is_active = 1 ORDER BY created_at DESC
+    `).all(sellerId);
+
+    res.status(200).json({
+      status: 'success',
+      data: products,
+    });
+  } catch (error) {
+    console.error('Error fetching seller products:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch products',
+    });
+  }
+};
+
+module.exports = {
+  getProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getSellerProducts,
+};

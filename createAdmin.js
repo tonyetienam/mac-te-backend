@@ -5,10 +5,12 @@ async function createAdmin() {
   try {
     console.log('🔐 Creating admin account...');
 
-    // Check if admin already exists
-    const checkResult = db.prepare('SELECT * FROM users WHERE email = ?').get('admin@mac-te.com');
-    if (checkResult) {
-      console.log('✅ Admin already exists:', checkResult.email);
+    // Check if admin exists
+    const existing = await db.getAsync('SELECT * FROM users WHERE email = ?', ['admin@mac-te.com']);
+
+    if (existing) {
+      console.log('✅ Admin already exists:', existing.email);
+      process.exit(0);
       return;
     }
 
@@ -18,18 +20,18 @@ async function createAdmin() {
     const id = 'admin_' + Date.now();
 
     // Create admin
-    db.prepare(`
+    await db.runAsync(`
       INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, 'admin@mac-te.com', hashedPassword, 'Admin', 'User', '08012345678', 'admin', 1);
+    `, [id, 'admin@mac-te.com', hashedPassword, 'Admin', 'User', '08012345678', 'admin', 1]);
 
     console.log('✅ Admin created successfully!');
     console.log('📧 Email: admin@mac-te.com');
     console.log('🔑 Password: Admin@123');
-    console.log('👤 Role: admin');
-
+    process.exit(0);
   } catch (error) {
     console.error('❌ Error creating admin:', error);
+    process.exit(1);
   }
 }
 

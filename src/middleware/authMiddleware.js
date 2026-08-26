@@ -12,9 +12,13 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mac-te-secret-2024');
 
-    const user = db.prepare('SELECT id, email, first_name, last_name, phone, role, is_active FROM users WHERE id = ?').get(decoded.id);
+    const user = await db.getAsync(
+      'SELECT id, email, first_name, last_name, phone, role, is_active FROM users WHERE id = ?',
+      [decoded.id]
+    );
+
     if (!user) {
       return res.status(401).json({
         status: 'error',

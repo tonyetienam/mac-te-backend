@@ -1,17 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const { protect, adminOnly } = require('../middleware/authMiddleware');
-const {
-  getProducts, getProductById, createProduct, updateProduct, deleteProduct,
-} = require('../controllers/productController');
+const { authenticate, authorize } = require('../middleware/authMiddleware');
+const productController = require('../controllers/productController');
 
 // Public routes
-router.get('/', getProducts);
-router.get('/:id', getProductById);
+router.get('/', productController.getProducts);
+router.get('/:id', productController.getProductById);
 
-// Admin/Seller routes
-router.post('/', protect, adminOnly, createProduct);
-router.put('/:id', protect, adminOnly, updateProduct);
-router.delete('/:id', protect, adminOnly, deleteProduct);
+// Authenticated routes
+router.get('/my-products', authenticate, productController.getSellerProducts);
+router.post('/', authenticate, productController.createProduct);
+router.put('/:id', authenticate, productController.updateProduct);
+router.delete('/:id', authenticate, productController.deleteProduct);
+
+// Admin only routes
+router.post('/admin', authenticate, authorize(['admin']), productController.createProduct);
+router.put('/admin/:id', authenticate, authorize(['admin']), productController.updateProduct);
+router.delete('/admin/:id', authenticate, authorize(['admin']), productController.deleteProduct);
 
 module.exports = router;
