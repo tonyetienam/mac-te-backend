@@ -1,28 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const {
-  register, login, getCurrentUser, getSellers, approveSeller, rejectSeller,
-  forgotPassword, resetPassword, getAllCustomers, updateProfileImage, uploadProfileImage,
-  createSellerByAdmin,
-} = require('../controllers/authController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { authenticate, authorize } = require('../middleware/authMiddleware');
+const authController = require('../controllers/authController');
 
 // Public routes
-router.post('/register', register);
-router.post('/login', login);
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
-// User routes (authenticated)
-router.get('/me', protect, getCurrentUser);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
-router.put('/profile-image', protect, updateProfileImage);
-router.put('/upload-profile-image', protect, uploadProfileImage);
+// Protected routes (authenticated)
+router.get('/me', authenticate, authController.getCurrentUser);
+router.put('/profile-image', authenticate, authController.updateProfileImage);
+router.post('/profile-image', authenticate, authController.uploadProfileImage);
 
 // Admin only routes
-router.get('/customers', protect, adminOnly, getAllCustomers);
-router.get('/sellers', protect, adminOnly, getSellers);
-router.put('/sellers/:id/approve', protect, adminOnly, approveSeller);
-router.put('/sellers/:id/reject', protect, adminOnly, rejectSeller);
-router.post('/sellers/create', protect, adminOnly, createSellerByAdmin);
+router.get('/customers', authenticate, authorize(['admin']), authController.getAllCustomers);
+router.get('/sellers', authenticate, authorize(['admin']), authController.getSellers);
+router.get('/users', authenticate, authorize(['admin']), authController.getAllUsers);
+router.put('/sellers/:id/approve', authenticate, authorize(['admin']), authController.approveSeller);
+router.put('/sellers/:id/reject', authenticate, authorize(['admin']), authController.rejectSeller);
+router.post('/sellers', authenticate, authorize(['admin']), authController.createSellerByAdmin);
 
 module.exports = router;
