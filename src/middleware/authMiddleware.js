@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
+const { db } = require('../config/database');
 
 const protect = async (req, res, next) => {
   try {
@@ -17,19 +17,16 @@ const protect = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const result = await pool.query(
-      'SELECT id, email, first_name, last_name, role FROM users WHERE id = $1 AND is_active = true',
-      [decoded.id]
-    );
+    const user = db.prepare('SELECT id, email, first_name, last_name, role FROM users WHERE id = ? AND is_active = 1').get(decoded.id);
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({
         status: 'error',
         message: 'Not authorized, user not found',
       });
     }
 
-    req.user = result.rows[0];
+    req.user = user;
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);

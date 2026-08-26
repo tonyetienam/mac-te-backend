@@ -4,8 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-const { pool, connectDB } = require('./config/database');
-const { initDB } = require('./config/initDB');
+const { db } = require('./config/database');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -63,12 +62,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
 const PORT = process.env.PORT || 8080;
-connectDB().then(async () => {
-  await initDB();
-  app.listen(PORT, () => {
-    console.log('🚀 Server running on port ' + PORT);
-    console.log('📊 Environment: ' + (process.env.NODE_ENV || 'development'));
-  });
+app.listen(PORT, () => {
+  console.log('🚀 Server running on port ' + PORT);
+  console.log('📊 Environment: ' + (process.env.NODE_ENV || 'development'));
 });
