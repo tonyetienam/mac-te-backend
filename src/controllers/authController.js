@@ -76,7 +76,7 @@ const register = async (req, res) => {
   }
 };
 
-// Login - Returns complete user data
+// ⭐⭐⭐ COMPLETELY FIXED LOGIN FUNCTION ⭐⭐⭐
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -90,8 +90,19 @@ const login = async (req, res) => {
 
     console.log('🔐 Login attempt:', email);
 
-    const user = await db.getAsync('SELECT * FROM users WHERE email = ?', [email]);
-    
+    // ⭐ FIX: Use callback-based db.get() directly
+    const user = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
+        if (err) {
+          console.error('❌ Database error:', err);
+          reject(err);
+        } else {
+          console.log('📦 Raw user from DB:', JSON.stringify(row, null, 2));
+          resolve(row);
+        }
+      });
+    });
+
     if (!user) {
       console.log('❌ User not found:', email);
       return res.status(401).json({
@@ -100,8 +111,9 @@ const login = async (req, res) => {
       });
     }
 
-    console.log('📦 User found:', JSON.stringify(user, null, 2));
+    console.log('✅ User found in DB:', user.email);
 
+    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
       console.log('❌ Invalid password for:', email);
@@ -111,15 +123,19 @@ const login = async (req, res) => {
       });
     }
 
+    // Check if account is active
     if (!user.is_active) {
+      console.log('❌ Account inactive:', email);
       return res.status(403).json({
         status: 'error',
         message: 'Account is deactivated or pending approval',
       });
     }
 
+    // Generate token
     const token = generateToken(user.id, user.role);
 
+    // ⭐ CRITICAL: Build userData with ALL fields
     const userData = {
       id: user.id,
       email: user.email,
@@ -132,7 +148,7 @@ const login = async (req, res) => {
     };
 
     console.log('✅ Login successful:', email);
-    console.log('📦 User data returned:', JSON.stringify(userData, null, 2));
+    console.log('📦 User data being returned:', JSON.stringify(userData, null, 2));
 
     res.status(200).json({
       status: 'success',
@@ -180,7 +196,7 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
-// Admin routes
+// Get all sellers (admin only)
 const getSellers = async (req, res) => {
   try {
     const sellers = await db.allAsync(`
