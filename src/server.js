@@ -4,7 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-const { pool } = require('./config/database');
+const { pool, connectDB } = require('./config/database');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -15,24 +15,17 @@ const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
 
-// Trust proxy (needed for Render, Railway, etc.)
 app.set('trust proxy', 1);
 
-// Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: '*',
-  credentials: true,
-}));
+app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -41,14 +34,12 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/chat', chatRoutes);
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'success',
@@ -58,26 +49,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 404 handler
 app.use((req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: 'Route not found',
-  });
+  res.status(404).json({ status: 'error', message: 'Route not found' });
 });
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   const status = err.status || 500;
   res.status(status).json({
     status: 'error',
     message: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 });
 
-// Initialize database tables
+// Initialize database tables (PostgreSQL version)
 const initDB = async () => {
   try {
     await pool.query(`
@@ -185,7 +170,8 @@ const initDB = async () => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-initDB().then(() => {
+connectDB().then(async () => {
+  await initDB();
   app.listen(PORT, () => {
     console.log('🚀 Server running on port ' + PORT);
     console.log('📊 Environment: ' + (process.env.NODE_ENV || 'development'));
