@@ -9,7 +9,7 @@ const initializePayment = async ({ email, amount, reference, metadata }) => {
       'https://api.paystack.co/transaction/initialize',
       {
         email,
-        amount: amount * 100, // Convert Naira to kobo
+        amount: amount * 100,
         reference,
         metadata,
         currency: 'NGN',
