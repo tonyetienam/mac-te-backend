@@ -10,6 +10,8 @@ async function createAdmin() {
 
     if (existing) {
       console.log('✅ Admin already exists:', existing.email);
+      console.log('📧 Email:', existing.email);
+      console.log('🔑 Password: Admin@123');
       process.exit(0);
       return;
     }
@@ -28,6 +30,7 @@ async function createAdmin() {
     console.log('✅ Admin created successfully!');
     console.log('📧 Email: admin@mac-te.com');
     console.log('🔑 Password: Admin@123');
+
     process.exit(0);
   } catch (error) {
     console.error('❌ Error creating admin:', error);
